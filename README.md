@@ -1,51 +1,108 @@
-# PZ Memory Configurator
+# Project Zomboid RAM Configurator
 
-[中文版說明](README_zh-TW.md)
+[繁體中文說明](README_zh-TW.md)
 
-This small utility has the following features:
-- Automatically detects the game directory and locates the ProjectZomboid64.json file
-- Automatically reads the current memory settings
-- Automatically detects system memory
-- Automatically provides a recommended memory value (you can also enter your own)
+A Windows tool for Project Zomboid players to adjust the **client's Java heap limit** (`-Xmx`), including memory-hungry mod lists and modded servers.
 
-The best part is that you don't need to install anything; it's all built-in Windows commands.
+## Download and run
 
-Future plans:
-- Add support for different languages for international users
-- Strengthen foolproof measures
+1. Download [English: PZ_Memory_Configurator_EN_US.bat](https://github.com/Minidoracat/project-zomboid-ram-configurator/releases/latest/download/PZ_Memory_Configurator_EN_US.bat), or [Traditional Chinese: PZ_Memory_Configurator_ZH_TW.bat](https://github.com/Minidoracat/project-zomboid-ram-configurator/releases/latest/download/PZ_Memory_Configurator_ZH_TW.bat). These links download the latest stable release directly; do not save a GitHub HTML page.
+2. **Only one `.bat` in your preferred language is needed. No accompanying `.ps1` is required.** If using Code → Download ZIP, extract it first and take the `.bat` you want.
+3. Close the game and wait for Steam updates or verification to finish.
+4. Double-click `PZ_Memory_Configurator_EN_US.bat`. The Traditional Chinese launcher is `PZ_Memory_Configurator_ZH_TW.bat`.
 
-Precautions:
-Applicable environment:
-Currently tested only on Windows 10 and Windows 11 64-bit editions, and is suitable for 64-bit systems only.
-Whether it works smoothly on Windows 7 is unknown and awaits verification by someone with a Windows 7 system.
-Feel free to report any issues to me.
+No Python, Java installation or additional packages are needed. The tool uses Windows PowerShell 5.1, not WMIC. The target is 64-bit Windows 10/11; this revision was verified on Windows 11. Windows 7, Linux and macOS are not supported.
 
-Usage scenarios:
-1. After you validate the game, the memory settings will be reset, so you need to modify them again.
-2. When the game updates, it's likely to update the ProjectZomboid64.json file.
-In these cases, you can open this utility and directly view the memory settings it determines for you.
+The launchers use `-NoProfile`, so your personal PowerShell startup scripts are not loaded. `-ExecutionPolicy Bypass` applies only to that PowerShell process: it does not change your permanent execution policy or override organizational policy. Only run downloads from sources you trust.
 
-License:
-You are welcome to share and repost, but please credit the source.
+Current version: **v2.0.0**. See [Releases](https://github.com/Minidoracat/project-zomboid-ram-configurator/releases) for release history and standalone downloads. The repository has been renamed; the familiar `.bat` filenames are unchanged.
 
-Download Instructions:
-Please visit the [Releases](https://github.com/Minidoracat/Project_Zomboid_Memory_Configurator/releases) page and choose the language version you want to download.
+## Using the tool
 
+The tool searches Steam and its libraries, then displays the game path, installed RAM, currently free RAM, current heap limit and recommendation.
 
-Instructions:
-Close the game first, otherwise the file cannot be modified.
-1. Run PZ_Memory_Configurator.bat directly.
-2. It will list your current system memory, game directory, and current memory settings for the game.
-Then you only need to enter 1 or 2.
+- Select a target if multiple installations are found.
+- If discovery fails, enter or drag in the game folder. It must contain `ProjectZomboid64.json` or its `.bak` backup. A backup-only folder can still enter the restore workflow.
+- Spaces, Chinese characters, apostrophes, brackets and exclamation marks in paths are supported.
 
-3. If you choose 2:
-Just enter a number, without any extra characters. If you accidentally enter the wrong number, don't worry...
-Simply re-validate the game with Steam.
+| Option | Action |
+| --- | --- |
+| 1 | Apply the heavy-mod recommendation |
+| 2 | Enter a whole-number GB limit, including a server's **client-side** recommendation; enter 0 to go back |
+| 3 | Restore the complete configuration from `ProjectZomboid64.json.bak` |
+| 0 | Quit |
 
-Afterword:
-I chose to use a .bat script to make it easy for everyone to use and to make the source code public without requiring any installations.
+Applying or restoring requires confirmation. Only `y` proceeds; Enter or another response cancels. Changes take effect on the next game launch. The tool never lowers your current setting automatically.
 
+## Heavy-mod recommendation
 
-[![Discord](https://img.shields.io/badge/Discord-Chat-blue?style=flat-square&logo=discord)](https://discord.gg/Gur2V67)
+The recommendation uses the **sum of installed memory-module capacities**, not the amount left free by background applications:
 
-If you have any questions or issues, feel free to open an issue on GitHub or join our [Discord server](https://discord.gg/Gur2V67) and ask for help.
+`floor(min(physical RAM × 80%, physical RAM − 4 GB))`
+
+| Installed RAM | Recommended limit |
+| --- | --- |
+| 8 GB | 4 GB |
+| 12 GB | 8 GB |
+| 16 GB | 12 GB |
+| 24 GB | 19 GB |
+| 32 GB | 25 GB |
+| 64 GB | 51 GB |
+
+Here, GB means 1024³ bytes, matching the JVM's `g` unit.
+
+- This is a **starting policy for heavy mods**, not an official PZ optimum or a benchmark result.
+- `-Xmx` caps the Java heap. It does not allocate the entire amount immediately and is not a cap on total process memory. Increasing it does not guarantee more FPS.
+- Below 8 GB, automatic recommendations are disabled but custom input remains available. If installed RAM cannot be detected, only restore/quit are available.
+- Custom values must be positive whole numbers **below installed RAM**. They may exceed the recommendation.
+- Values above the recommendation, below the current limit, or close to/above the free RAM measured during startup trigger warnings before confirmation. Leaving 4 GB is not a guarantee that every background workload will fit.
+- This changes the player's client configuration, not dedicated-server startup parameters. Do not copy a server host's RAM allocation without checking that it is intended for clients.
+
+## Backups and safe writes
+
+- Only the unique `-Xmx` value is replaced. Other content, formatting, Unicode and UTF-8 BOM presence are preserved. `-Xms` is never changed.
+- Existing sizes may use `k`, `m`, `g` (either case), or bytes without a suffix. Missing/duplicate/invalid arguments, non-UTF-8 files and ambiguous edits are rejected rather than guessed.
+- A new limit below an existing `-Xms` is rejected; resolve that conflict yourself first.
+- A temporary file in the same directory is validated before atomic replacement. The complete pre-change file becomes `.bak`. Each actual change replaces that backup with the previous version; setting the same limit writes neither file.
+- Read-only files, insufficient permissions or filesystems without atomic replacement cause failure. The tool does not fall back to unsafe direct overwrites. Follow the error details to resolve the cause.
+- Some Windows replacement errors can occur after files have already been moved; not every operating-system failure leaves every file unchanged. On replacement failure, the tool retains the candidate and previous-backup copy and reports recovery paths. **Preserve and inspect these files before retrying; do not delete them blindly.**
+- If another program changes the configuration while you are confirming, the write is rejected. Read the new state and confirm again.
+- The file is read back and checked before success is reported.
+- Restore keeps `.bak` intact and can recover a damaged or missing JSON file from a valid backup. **It restores the whole configuration and can undo game updates or manual edits. Do not blindly restore a backup from another game version.**
+
+Steam updates or game verification may reset the limit; open the tool again to check. If the configuration is damaged and no valid backup is available, use Steam's **Verify integrity of game files**, then configure it again.
+
+## Development and verification
+
+Maintain the shared logic only in `PZ_Memory_Configurator.ps1`. `Build-Standalone.ps1` embeds that same core into both root-level `.bat` files. Do not edit the generated `.bat` files directly. They contain readable source and execute the core in memory, without downloading code or creating a temporary `.ps1`.
+
+After editing the core, regenerate the standalone files locally (this does not upload anything or create a Release):
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Build-Standalone.ps1
+```
+
+Use `-OutputDirectory "D:\PZ-release"` for another output folder. Publish the two generated `.bat` assets; players only need one.
+
+Run the isolated regression checks; they do not modify real game settings:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tests\MemoryConfigurator.Tests.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tests\Standalone.Tests.ps1
+```
+
+The standalone checks verify that root-level `.bat` files match the current core, packaging is reproducible, and both languages start and immediately quit from an isolated folder with no `.ps1`. They also check nonzero exit codes for truncated downloads. These checks may read local Steam/game information but never modify game settings.
+
+To open the interactive tool for a specific directory:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\PZ_Memory_Configurator.ps1 -Language en-US -GameDirectory "D:\SteamLibrary\steamapps\common\ProjectZomboid"
+```
+
+This is the real configuration workflow and still asks for confirmation before writing. Passing regression checks does not establish compatibility with every PZ version, launcher or mod list, or demonstrate a performance improvement.
+
+A real file-lock failure was also exercised to check recovery-file retention. Windows partial-replacement errors `1176`/`1177` and power-loss scenarios were not reproduced.
+
+## Sharing and support
+
+You are welcome to share this tool; please credit the source. Report problems in a GitHub issue or on [Discord](https://discord.gg/Gur2V67). Include the error, Windows version, game version and launch method. Redact personal information from paths before sharing them.
