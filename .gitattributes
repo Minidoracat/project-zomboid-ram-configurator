@@ -1,0 +1,2 @@
+# Preserve CRLF in raw/ZIP downloads: these BAT files are release artifacts.
+*.bat -text
