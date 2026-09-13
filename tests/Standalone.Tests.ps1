@@ -1,4 +1,6 @@
 ﻿#Requires -Version 5.1
+# Copyright (C) 2023-2026 Minidoracat
+# SPDX-License-Identifier: GPL-3.0-only
 $ErrorActionPreference = 'Stop'
 $build = Join-Path (Split-Path -Parent $PSScriptRoot) 'Build-Standalone.ps1'
 $root = Join-Path ([System.IO.Path]::GetTempPath()) ('pz-standalone-' + [guid]::NewGuid().ToString('N'))
@@ -39,7 +41,7 @@ function Invoke-Standalone {
 
 try {
     & $build -OutputDirectory $downloads
-    foreach ($suffix in @('ZH_TW', 'EN_US')) {
+    foreach ($suffix in @('ZH_TW', 'ZH_CN', 'EN_US')) {
         $path = Join-Path $downloads "PZ_Memory_Configurator_$suffix.bat"
         $first = [System.IO.File]::ReadAllText($path, [System.Text.Encoding]::UTF8)
         $published = Join-Path (Split-Path -Parent $PSScriptRoot) "PZ_Memory_Configurator_$suffix.bat"

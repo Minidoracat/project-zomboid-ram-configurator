@@ -1,0 +1,11 @@
+Project Zomboid RAM Configurator — 應用程式圖示
+
+來源：為本專案 AI 輔助生成的原創美術；不是 Project Zomboid 官方圖示，未使用官方 logo。
+生成工具：generate_image；provider 回報 openai-codex，model 回報 gpt-6-astra。
+美術方向：低飽和末日生存風格、磨損暗軍綠底板、泛黃老式 RAM、殭屍手與少量鐵鏽暗紅。RAM 大輪廓優先，無文字。
+
+app-icon-source.webp：生成原圖，1254×1254 RGBA，保留透明背景。
+app-icon.png：以 Pillow LANCZOS 縮為 512×512，供 Slint 視窗及標頭使用。
+app-icon.ico：同一原圖輸出 16、20、24、32、40、48、64、128、256 像素版本，供 Windows EXE 資源使用。
+
+此美術隨本專案依 GPL-3.0-only 提供；Project Zomboid 相關商標仍屬各自權利人。

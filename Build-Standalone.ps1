@@ -1,4 +1,6 @@
 ﻿#Requires -Version 5.1
+# Copyright (C) 2023-2026 Minidoracat
+# SPDX-License-Identifier: GPL-3.0-only
 [CmdletBinding()]
 param([string]$OutputDirectory = $PSScriptRoot)
 
@@ -29,14 +31,14 @@ exit /b %result%
 $outputPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutputDirectory)
 $null = [System.IO.Directory]::CreateDirectory($outputPath)
 $encoding = New-Object System.Text.UTF8Encoding($false)
-foreach ($language in @('zh-TW', 'en-US')) {
-    $suffix = if ($language -eq 'zh-TW') { 'ZH_TW' } else { 'EN_US' }
-    $failure = if ($language -eq 'zh-TW') {
-        '工具未能完成操作，請查看上方錯誤。若公司或學校禁止執行腳本，請聯絡管理員。'
-    } else {
-        'The operation did not complete. Check the error above. If scripts are blocked by your organization, contact your administrator.'
-    }
-    $header = $template.Replace('__LANGUAGE__', $language).Replace('__FAILURE__', $failure)
+$targets = @(
+    @{ Language = 'zh-TW'; Suffix = 'ZH_TW'; Failure = '工具未能完成操作，請查看上方錯誤。若公司或學校禁止執行腳本，請聯絡管理員。' }
+    @{ Language = 'zh-CN'; Suffix = 'ZH_CN'; Failure = '工具未能完成操作，请查看上方错误。如果公司或学校禁止运行脚本，请联系管理员。' }
+    @{ Language = 'en-US'; Suffix = 'EN_US'; Failure = 'The operation did not complete. Check the error above. If scripts are blocked by your organization, contact your administrator.' }
+)
+foreach ($target in $targets) {
+    $suffix = $target.Suffix
+    $header = $template.Replace('__LANGUAGE__', $target.Language).Replace('__FAILURE__', $target.Failure)
     $content = ($header + "`n" + $core + "`n# PZ_CONFIGURATOR_END`n").Replace("`r`n", "`n").Replace("`n", "`r`n")
     $destination = Join-Path $outputPath "PZ_Memory_Configurator_$suffix.bat"
     [System.IO.File]::WriteAllText($destination, $content, $encoding)

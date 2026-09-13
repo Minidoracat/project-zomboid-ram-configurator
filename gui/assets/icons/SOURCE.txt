@@ -1,0 +1,49 @@
+Lucide icons — bundled UI icon set
+==================================
+
+Upstream
+--------
+  Project  : Lucide (https://lucide.dev)
+  Repo     : https://github.com/lucide-icons/lucide
+  Version  : 1.45.0  (git tag 1.45.0, commit b998e2892b90b88004d62da2d0b64dab9959a520,
+                      released 2026-09-11)
+  Base URL : https://raw.githubusercontent.com/lucide-icons/lucide/1.45.0/icons/<name>.svg
+  Retrieved: 2026-09-13
+  Modified : no — every .svg below is byte-identical to upstream. No author or licence
+             statement was touched, no per-state colour variants were generated. All icons keep
+             upstream's `stroke="currentColor"` / `fill="none"` / `stroke-width="2"` on a
+             24x24 viewBox; recolouring is done at runtime with Slint's `Image.colorize`
+             (resvg resolves `currentColor` to black, the alpha channel carries the shape).
+
+Files (SHA-256, upstream bytes)
+-------------------------------
+  check.svg                 7f33acc9a77a61659531044525fc008edebe215bf4dcf1c789c8674ad3277db0  239 bytes
+  chevron-down.svg          66ea878e72ed3488bb3b464c39dfdccee8d1f78e560dccea40e5e12da0e87e87  236 bytes
+  chevron-right.svg         2758143d7b2434e4aa7307dfd34405c87909ff4052f21b5f3f40d45224b4f19b  237 bytes
+  circle-alert.svg          ce3e98b7a03b78c0071131df42466e4e1ff5187fccad30e739ec9ce951cf685a  332 bytes
+  folder-open.svg           ee57452b40e71df310214091dd9da1941a397c83197b8ff8d7ae66dd4242578b  401 bytes
+  info.svg                  bc977a64eb96f3e9c1041ffd09a3fceb70e3e65c02b571f76064062ed31f3cb9  294 bytes
+  languages.svg             ae9048feb2c7b19855da9a8f5414f68125573039777a89b9c253cceed5dc5075  362 bytes
+  memory-stick.svg          9214439ac142c10156434542908436087fb174c71c46e30cfb46971c56ba33d2  510 bytes
+  monitor.svg               d1a443233345724859de8e4fb48968ba91e885e12ddbd710701548bd91b39428  346 bytes
+  moon.svg                  205b959e940d5841f0ce1d09c933153da9d9c94130a54d5cc0c68c2af1d403da  334 bytes
+  refresh-cw.svg            2e10dd403c85a24f163d59fc6151aa21147fe9402e1305dfc8979208caee8944  392 bytes
+  rotate-ccw.svg            622685386ab4017eabfde01cd74550a20b1924df233b353f73b6b155371f2afd  297 bytes
+  shield-check.svg          8d4fcdbde5bba4abb1a2f6fe53e37ceb6343a1d5449a9d88f6f97c1971d26c4e  415 bytes
+  sliders-horizontal.svg    e43a00e5eb684e6cbb61083bed2528d7a3fa5f265693eb2b5f314cd432aa65f4  422 bytes
+  sun.svg                   a3955c8b0425fcc5c9ba12d2bdd77fe53b2cd5dd05e7742a56f342e996fb2ef8  485 bytes
+  LICENSE.txt               b495047bd93a9b06913511076f504daba17d5bbeb3e0650f3bb53a4220329c57  3208 bytes
+
+Licence
+-------
+LICENSE.txt is upstream's LICENSE file copied verbatim, and it is TWO licences:
+
+  1. ISC License — Copyright (c) 2026 Lucide Icons and Contributors — covers the Lucide project.
+  2. The MIT License (MIT) — Copyright (c) 2013-present Cole Bemis — additionally covers the
+     icons Lucide inherited from Feather. Icons bundled here that appear on that Feather list
+     include check, chevron-down, chevron-right, info, monitor, moon, sun (and alert-circle,
+     the former name of circle-alert).
+
+Both licence texts must be reproduced in any distribution of the built application — keep
+LICENSE.txt whole (do not strip the Feather/MIT section) and reachable from the About / licence
+surface.

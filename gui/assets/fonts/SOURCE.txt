@@ -1,0 +1,78 @@
+Noto Sans TC / SC — 內嵌介面字型
+================================
+
+Files shipped in this repo
+--------------------------
+  NotoSansTC-Regular.otf
+    Family name (name ID 1 / 16) : Noto Sans TC
+    Subfamily                    : Regular
+    PostScript name              : NotoSansTC-Regular
+    OS/2 usWeightClass           : 400
+    Version                      : 2.004 (hotconv 1.0.118; makeotfexe 2.5.65603)
+    Outlines                     : CFF (OpenType/CFF) — accepted by Slint (.ttf/.ttc/.otf)
+    Size                         : 5,683,368 bytes
+    SHA-256                      : 5bab0cb3c1cf89dde07c4a95a4054b195afbcfe784d69d75c340780712237537
+    Source URL                   : https://raw.githubusercontent.com/notofonts/noto-cjk/main/Sans/SubsetOTF/TC/NotoSansTC-Regular.otf
+    Upstream repo                : https://github.com/notofonts/noto-cjk (official Google/Adobe Noto CJK repository)
+    Retrieved                    : 2026-09-13
+    Modified                     : no — byte-identical to upstream, not subset, not renamed internally
+    Coverage verified            : Latin + Latin-1 + digits + ASCII punctuation + CJK Unified Ideographs
+                                   + CJK fullwidth punctuation + arrows + U+2713 CHECK MARK
+    Note                         : "SubsetOTF" is upstream's own per-language packaging
+                                   (Traditional-Chinese cut of the Source Han Sans / Noto Sans CJK
+                                   superfamily). It is published that way by the Noto project; we
+                                   did not subset anything ourselves.
+
+  NotoSansTC-Medium.otf
+    Family name (name ID 16)     : Noto Sans TC       <- same family as the Regular above
+    Family name (name ID 1)      : Noto Sans TC Medium
+    Typographic subfamily        : Medium
+    PostScript name              : NotoSansTC-Medium
+    OS/2 usWeightClass           : 500
+    Version                      : 2.004 (hotconv 1.0.118; makeotfexe 2.5.65603)
+    Outlines                     : CFF (OpenType/CFF)
+    Size                         : 5,695,744 bytes
+    SHA-256                      : bf206dca0975779bac71cb49a037a364156ca98a0c431b1b7d6b29fb8952ac7e
+    Source URL                   : https://raw.githubusercontent.com/notofonts/noto-cjk/main/Sans/SubsetOTF/TC/NotoSansTC-Medium.otf
+    Upstream repo                : https://github.com/notofonts/noto-cjk
+    Retrieved                    : 2026-09-13
+    Modified                     : no — byte-identical to upstream
+    Coverage verified            : same probe set as the Regular, all present
+
+  NotoSansSC-Regular.otf
+    Family name                  : Noto Sans SC
+    Subfamily                    : Regular
+    OS/2 usWeightClass           : 400
+    Size                         : 8,331,336 bytes
+    SHA-256                      : faa6c9df652116dde789d351359f3d7e5d2285a2b2a1f04a2d7244df706d5ea9
+    Source URL                   : https://raw.githubusercontent.com/notofonts/noto-cjk/main/Sans/SubsetOTF/SC/NotoSansSC-Regular.otf
+    Modified                     : no — 官方簡中封裝，未自行裁字或改名
+
+  NotoSansSC-Medium.otf
+    Typographic family           : Noto Sans SC
+    Subfamily                    : Medium
+    OS/2 usWeightClass           : 500
+    Size                         : 8,345,436 bytes
+    SHA-256                      : 7633f5a016d4dd95e685a69633d818aabc4644c4b08e26bd35b1b30c45ed5dda
+    Source URL                   : https://raw.githubusercontent.com/notofonts/noto-cjk/main/Sans/SubsetOTF/SC/NotoSansSC-Medium.otf
+    Modified                     : no — 官方簡中封裝，未自行裁字或改名
+
+  OFL.txt
+    SIL Open Font License 1.1 — 適用於上述四個字型。
+    Source URL : https://raw.githubusercontent.com/google/fonts/main/ofl/notosanstc/OFL.txt
+    SC source  : https://raw.githubusercontent.com/google/fonts/main/ofl/notosanssc/OFL.txt（與 TC 授權逐字相同）
+    SHA-256    : 1c05c68c34f9708415aada51f17e1b0092d2cea709bf4a94cd38114f9e73d7d9
+    Copyright  : (c) 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'.
+
+字重與內嵌方式
+--------------
+採用官方靜態 Regular（400）與 Medium（500），分別用於內文及標題／數值。
+繁中／英文選用 "Noto Sans TC"；簡中選用 "Noto Sans SC"，各自以 font-weight 選擇字重。
+gui/ui/app.slint 匯入四份 OTF，gui/build.rs 的 EmbedFiles 將字型內嵌至 EXE。
+未內嵌 Bold（700），介面不依賴該字重。
+
+授權義務
+--------
+字型保持官方原檔與名稱，依 SIL OFL 1.1 散布。
+散布時須保留著作權與授權條文；完整 OFL.txt 已內嵌至程式的「關於／授權」。
+修改版本不得使用保留名稱 "Source"；本專案未修改字型。

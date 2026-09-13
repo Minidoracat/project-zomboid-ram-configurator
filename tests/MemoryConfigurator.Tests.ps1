@@ -1,4 +1,6 @@
 ﻿#Requires -Version 5.1
+# Copyright (C) 2023-2026 Minidoracat
+# SPDX-License-Identifier: GPL-3.0-only
 <#
     PZ Memory Configurator 行為回歸測試（無框架、Windows PowerShell 5.1 自包含）
 

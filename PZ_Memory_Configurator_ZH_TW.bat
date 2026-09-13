@@ -10,9 +10,13 @@ pause
 exit /b %result%
 # PZ_CONFIGURATOR_SOURCE
 #Requires -Version 5.1
+# Project Zomboid RAM Configurator
+# Copyright (C) 2023-2026 Minidoracat
+# SPDX-License-Identifier: GPL-3.0-only
+# This program comes with ABSOLUTELY NO WARRANTY. See the LICENSE file for details.
 <#
 .SYNOPSIS
-    Project Zomboid heap-size (-Xmx) configurator core + bilingual console UI.
+    Project Zomboid heap-size (-Xmx) configurator core + trilingual console UI.
 .DESCRIPTION
     Dot-source this file to load the functions only (no UI):
         . .\PZ_Memory_Configurator.ps1
@@ -21,7 +25,7 @@ exit /b %result%
 #>
 [CmdletBinding()]
 param(
-    [ValidateSet('zh-TW', 'en-US')]
+    [ValidateSet('zh-TW', 'zh-CN', 'en-US')]
     [string]$Language = 'zh-TW',
 
     [string]$GameDirectory
@@ -564,6 +568,68 @@ function Get-PzUiStrings {
         Bye             = '已離開。'
     }
 
+    $cn = @{
+        Title           = "Project Zomboid RAM Configurator v$script:PzVersion — 内存配置器"
+        Detecting       = '正在检测系统内存与游戏安装位置...'
+        TotalRam        = '系统物理内存：{0} GB'
+        TotalRamUnknown = '无法检测系统物理内存，因此不提供推荐值，也不会写入任何配置。'
+        FreeRam         = '当前可用内存：{0} GB'
+        FreeRamUnknown  = '当前可用内存：无法检测'
+        GameFile        = '配置文件位置：{0}'
+        CurrentLimit    = '当前内存上限：{0}（约 {1} GB）'
+        CurrentUnknown  = '当前内存上限：无法读取（配置文件可能已损坏）'
+        ReadFailed      = '读取配置文件失败：{0}'
+        Recommend       = '推荐上限：{0} GB'
+        RecommendHow    = '重度 MOD 起始策略：min(物理内存 x 80%, 物理内存 - 4 GB)，向下取整；不是官方最优值。'
+        RecommendNone   = '物理内存小于 8 GB，不提供自动推荐值；你仍然可以自己输入数值。'
+        NoteHeader      = '说明：'
+        NoteNotUsed     = '- 这是「上限」，不会立刻占用内存，也不代表游戏一定会用到。'
+        NoteNoFps       = '- 调高上限不保证提升 FPS，只是让重度 MOD 不容易因内存不足而崩溃。'
+        NoteCloseGame   = '- 操作前请先完全关闭游戏。'
+        NoteNextLaunch  = '- 修改会在下一次启动游戏时生效。'
+        NoteAboveRec    = '- 当前配置已高于推荐值，如果你是故意这样设置就保持原样，本工具不会自动调低。'
+        Searching       = '正在搜索 Steam 的 Project Zomboid 安装目录...'
+        NoneFound       = '找不到 Project Zomboid 安装目录。'
+        EnterFolder     = '请输入游戏文件夹（可以直接把文件夹拖进窗口），或输入 0 退出'
+        InvalidFolder   = '在该文件夹里找不到 ProjectZomboid64.json 或其 .bak 备份，请确认是游戏主目录。'
+        MultipleFound   = '找到多个安装，请选择要配置的目录：'
+        ChooseInstall   = '请输入编号（0 退出）'
+        MenuHeader      = '请选择操作：'
+        Menu1           = '1. 应用推荐值 {0} GB'
+        Menu1Disabled   = '1. 应用推荐值（当前无法提供推荐值）'
+        Menu2           = '2. 自己输入数值（GB）'
+        Menu3           = '3. 从备份还原（{0}）'
+        Menu0           = '0. 退出'
+        MenuPrompt      = '输入选项'
+        InvalidChoice   = '选项无效，请重新输入。'
+        RecUnavailable  = '当前没有可用的推荐值，请改用自己输入或退出。'
+        WriteDisabled   = '由于无法检测系统内存，当前只能还原备份或退出。'
+        CustomPrompt    = '请输入内存上限（只输入数字，单位 GB），或输入 0 返回'
+        CustomInvalid   = '请输入正整数 GB，不要包含小数、文字或单位。'
+        CustomTooHigh   = '请输入小于系统物理内存 {0} GB 的整数；配置文件没有变更。'
+        WarnHeader      = '请注意：'
+        WarnExceedRec   = '- {0} GB 高于推荐值 {1} GB，系统里其他程序可用的内存会变少。'
+        WarnBelowCur    = '- {0} GB 低于当前设置的 {1} GB，这会调低游戏可用的内存。'
+        WarnFreeRam     = '- {0} GB 已接近或超过当前可用的 {1} GB，游戏可能会变慢甚至无法启动。'
+        ConfirmApply    = '确定把内存上限设置为 {0} GB 吗？(y/N)'
+        ConfirmRestore  = '还原会覆盖整个配置文件，可能撤销游戏更新或其他修改。确定使用备份吗？(y/N)'
+        Cancelled       = '已取消，配置文件没有任何变更。'
+        Applying        = '正在写入配置...'
+        ApplySuccess    = '配置成功，回读结果：{0}（约 {1} GB）'
+        ApplyUnchanged  = '当前配置已经是 {0} GB，没有变更文件，也没有更新备份。'
+        BackupAt        = '写入前的原始文件已备份在：{0}'
+        Restoring       = '正在从备份还原...'
+        RestoreSuccess  = '还原完成，回读结果：{0}（约 {1} GB）'
+        BackupKept      = '备份文件已保留：{0}'
+        Failed          = '操作失败：{0}'
+        RecoveryHeader  = '可以这样处理：'
+        Recovery1       = '- 如果之前已经有备份，可以选择「3. 从备份还原」把配置文件恢复回去。'
+        Recovery2       = '- 请先完全关闭游戏以及 Steam 的下载／验证任务，再重新运行本工具。'
+        Recovery3       = '- 如果文件是只读或权限不足，请取消只读属性，或以管理员身份重新运行。'
+        Recovery4       = '- 如果配置文件本身已损坏，可以用 Steam 的「验证游戏文件完整性」还原它。'
+        Bye             = '已退出。'
+    }
+
     $en = @{
         Title           = "Project Zomboid RAM Configurator v$script:PzVersion"
         Detecting       = 'Detecting system memory and game installation...'
@@ -627,6 +693,7 @@ function Get-PzUiStrings {
     }
 
     if ($Language -eq 'en-US') { return $en }
+    if ($Language -eq 'zh-CN') { return $cn }
     return $zh
 }
 
@@ -663,7 +730,7 @@ function Show-PzError {
 function Invoke-PzConfigurator {
     [CmdletBinding()]
     param(
-        [ValidateSet('zh-TW', 'en-US')]
+        [ValidateSet('zh-TW', 'zh-CN', 'en-US')]
         [string]$Language = 'zh-TW',
 
         [string]$GameDirectory

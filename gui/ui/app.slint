@@ -1,0 +1,1192 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Project Zomboid RAM Configurator - native GUI view.
+// Copyright (C) 2023-2026 Minidoracat
+//
+// The view is deliberately passive: every string arrives already translated
+// and every number already formatted, so there is no locale logic here and no
+// hard-coded theme. Colours come from `Palette`, which follows the system
+// light/dark setting through the selected Slint style.
+
+import { Button, ComboBox, LineEdit, ScrollView, Palette } from "std-widgets.slint";
+
+// Bundled UI text faces. The Slint compiler embeds all four files and
+// registers them under two families - Noto Sans TC and Noto Sans SC - so a
+// player never has to install anything; the licence ships next to them in
+// `assets/fonts/OFL.txt`. The active locale picks the family (traditional or
+// simplified glyph shapes). Two weights exist - 400 for text, 500 for
+// headings and figures - and nothing heavier, so the hierarchy leans on
+// size, colour and spacing rather than on bold.
+import "../assets/fonts/NotoSansTC-Regular.otf";
+import "../assets/fonts/NotoSansTC-Medium.otf";
+import "../assets/fonts/NotoSansSC-Regular.otf";
+import "../assets/fonts/NotoSansSC-Medium.otf";
+
+component AutoScrollView inherits ScrollView {
+    public function reveal(y: length, item-height: length) {
+        let top = root.absolute-position.y + 6px;
+        let bottom = root.absolute-position.y + root.visible-height - 6px;
+        if y < top {
+            root.viewport-y += top - y;
+        } else if y + item-height > bottom {
+            root.viewport-y -= y + item-height - bottom;
+        }
+        root.viewport-y = max(min(0px, root.viewport-y),
+            min(0px, root.visible-height - root.viewport-height));
+    }
+}
+
+/// Single-colour line icons. Every use tints them from `Palette`, so the
+/// artwork follows the active scheme instead of fighting it. The application
+/// mark is the one exception: it keeps its own colours.
+global Ico {
+    out property <image> folder: @image-url("../assets/icons/folder-open.svg");
+    out property <image> refresh: @image-url("../assets/icons/refresh-cw.svg");
+    out property <image> memory: @image-url("../assets/icons/memory-stick.svg");
+    out property <image> sliders: @image-url("../assets/icons/sliders-horizontal.svg");
+    out property <image> restore: @image-url("../assets/icons/rotate-ccw.svg");
+    out property <image> check: @image-url("../assets/icons/check.svg");
+    out property <image> info: @image-url("../assets/icons/info.svg");
+    out property <image> languages: @image-url("../assets/icons/languages.svg");
+    out property <image> sun: @image-url("../assets/icons/sun.svg");
+    out property <image> moon: @image-url("../assets/icons/moon.svg");
+    out property <image> monitor: @image-url("../assets/icons/monitor.svg");
+    out property <image> chevron-down: @image-url("../assets/icons/chevron-down.svg");
+    out property <image> chevron-right: @image-url("../assets/icons/chevron-right.svg");
+    out property <image> shield: @image-url("../assets/icons/shield-check.svg");
+    out property <image> alert: @image-url("../assets/icons/circle-alert.svg");
+}
+
+/// Every tone starts from a semantic palette role, never from a light/dark
+/// test: the user may pick "system", in which case the scheme is reported as
+/// unknown and only the style knows the real answer. Surfaces reuse the
+/// palette's own fills; the thin lines are the foreground at a low alpha,
+/// which darkens on a light page and lightens on a dark one by construction.
+global Tone {
+    out property <brush> surface: Palette.alternate-background;
+    out property <brush> hairline: Palette.foreground.transparentize(0.9);
+    out property <brush> outline: Palette.foreground.transparentize(0.62);
+    out property <brush> track: Palette.foreground.transparentize(0.88);
+    out property <brush> bar: Palette.foreground.transparentize(0.45);
+    out property <brush> accent-wash: Palette.accent-background.transparentize(0.9);
+    out property <brush> accent-line: Palette.accent-background.transparentize(0.4);
+}
+
+/// Static chrome: labels that do not depend on the detected machine state.
+export struct Texts {
+    window-title: string,
+    app-title: string,
+    app-subtitle: string,
+    font-family: string,
+    language-label: string,
+    about-open: string,
+    location-title: string,
+    location-choose: string,
+    location-reload: string,
+    memory-title: string,
+    memory-total: string,
+    memory-free: string,
+    memory-current: string,
+    chart-system: string,
+    chart-pending: string,
+    chart-axis-min: string,
+    strategy-title: string,
+    strategy-note: string,
+    method-label: string,
+    heavy-label: string,
+    heavy-summary: string,
+    heavy-description: string,
+    balanced-label: string,
+    balanced-summary: string,
+    balanced-description: string,
+    custom-label: string,
+    custom-summary: string,
+    custom-description: string,
+    custom-hint: string,
+    custom-placeholder: string,
+    unit-gb: string,
+    diff-label: string,
+    action-restore: string,
+}
+
+/// Everything the memory overview and the two bars display.
+export struct MemoryView {
+    total: string,
+    free: string,
+    current: string,
+    rec-label: string,
+    rec-value: string,
+    chart-shown: bool,
+    total-label: string,
+    used-ratio: float,
+    legend-used: string,
+    legend-free: string,
+    pending-label: string,
+    pending-ratio: float,
+    pending-shown: bool,
+    rec-ratio: float,
+    rec-shown: bool,
+    legend-tick: string,
+    axis-max: string,
+}
+
+/// State of the strategy column: per-card notes, validation, diff and actions.
+export struct StrategyView {
+    heavy-note: string,
+    balanced-note: string,
+    heavy-enabled: bool,
+    balanced-enabled: bool,
+    custom-enabled: bool,
+    custom-error: string,
+    diff-from: string,
+    diff-to: string,
+    diff-note: string,
+    diff-a11y: string,
+    apply-label: string,
+    apply-enabled: bool,
+    restore-enabled: bool,
+    backup-note: string,
+}
+
+/// The single modal surface. `kind`: 0 apply, 1 restore, 2 install, 3 about.
+export struct DialogView {
+    open: bool,
+    kind: int,
+    title: string,
+    detail: string,
+    note: string,
+    warn-title: string,
+    confirm: string,
+    confirm-enabled: bool,
+    cancel: string,
+    label: string,
+}
+
+/// Decorative glyph. It is vertically centred against the text it sits next to
+/// and never carries meaning on its own, so it stays out of the a11y tree.
+component Icon inherits VerticalLayout {
+    in property <image> source;
+    in property <length> size: 16px;
+    in property <brush> tint: Palette.foreground;
+    in property <float> dim: 1.0;
+
+    alignment: center;
+    horizontal-stretch: 0;
+    Image {
+        source: root.source;
+        width: root.size;
+        height: root.size;
+        image-fit: contain;
+        colorize: root.tint;
+        opacity: root.dim;
+        accessible-role: none;
+    }
+}
+
+/// Group heading. With a single embedded weight the rank has to come from
+/// size, full-strength colour and a touch of tracking rather than from bold.
+component SectionTitle inherits HorizontalLayout {
+    in property <string> text;
+    in property <image> icon;
+
+    spacing: 8px;
+    if root.icon.width > 0: Icon {
+        source: root.icon;
+        size: 17px;
+        dim: 0.85;
+    }
+    Text {
+        text: root.text;
+        font-size: 15px;
+        font-weight: 500;
+        letter-spacing: 0.5px;
+        color: Palette.foreground;
+        vertical-alignment: center;
+        wrap: word-wrap;
+        horizontal-stretch: 1;
+    }
+}
+
+component Hint inherits Text {
+    font-size: 12px;
+    color: Palette.foreground;
+    opacity: 0.68;
+    wrap: word-wrap;
+}
+
+component Body inherits Text {
+    font-size: 13px;
+    color: Palette.foreground;
+    opacity: 0.92;
+    wrap: word-wrap;
+}
+
+/// Quiet grouping surface. It replaces the rules and full-height separators
+/// the window used to draw: one palette fill plus a hairline reads as
+/// structure without turning the page into a stack of heavy boxes.
+component Panel inherits Rectangle {
+    background: Tone.surface;
+    border-radius: 10px;
+    border-width: 1px;
+    border-color: Tone.hairline;
+}
+
+/// Message block. `kind`: 1 info, 2 done, 3 warning, 4 error. The tone colour
+/// carries the meaning through the icon and the border; the fill stays light
+/// so a warning is unmissable without shouting over the rest of the window.
+component Callout inherits Rectangle {
+    in property <int> kind: 1;
+    in property <string> title;
+    in property <[string]> lines;
+
+    property <color> tone: root.kind == 4 ? #e5484d
+        : root.kind == 3 ? #d98600
+        : root.kind == 2 ? #16a34a
+        : #3b82f6;
+
+    border-radius: 10px;
+    border-width: 1px;
+    background: root.tone.transparentize(0.9);
+    border-color: root.tone.transparentize(0.6);
+
+    HorizontalLayout {
+        padding: 12px;
+        spacing: 10px;
+
+        Icon {
+            alignment: start;
+            source: root.kind == 2 ? Ico.check : root.kind == 1 ? Ico.info : Ico.alert;
+            size: 16px;
+            tint: root.tone;
+        }
+
+        VerticalLayout {
+            spacing: 6px;
+            horizontal-stretch: 1;
+            if root.title != "": Text {
+                text: root.title;
+                font-size: 13px;
+                font-weight: 500;
+                color: Palette.foreground;
+                wrap: word-wrap;
+            }
+            for line in root.lines: Text {
+                text: line;
+                font-size: 12px;
+                color: Palette.foreground;
+                opacity: 0.8;
+                wrap: word-wrap;
+            }
+        }
+    }
+}
+
+/// Label above a large value, used for the four memory readouts.
+component Readout inherits VerticalLayout {
+    in property <string> label;
+    in property <string> value;
+    in property <bool> accent;
+
+    spacing: 3px;
+    Text {
+        text: root.label;
+        font-size: 12px;
+        color: Palette.foreground;
+        opacity: 0.62;
+        wrap: word-wrap;
+    }
+    Text {
+        text: root.value;
+        font-size: 20px;
+        font-weight: 500;
+        color: root.accent ? Palette.accent-background : Palette.foreground;
+        wrap: word-wrap;
+    }
+}
+
+/// One horizontal bar with a caption row and an optional recommendation tick.
+component Bar inherits VerticalLayout {
+    in property <string> label;
+    in property <string> value;
+    in property <float> ratio;
+    in property <bool> tick-shown;
+    in property <float> tick-ratio;
+    in property <brush> fill;
+
+    spacing: 6px;
+    HorizontalLayout {
+        spacing: 8px;
+        Text {
+            text: root.label;
+            font-size: 12px;
+            color: Palette.foreground;
+            opacity: 0.62;
+            horizontal-stretch: 0;
+        }
+        Rectangle {
+            horizontal-stretch: 1;
+        }
+        Text {
+            text: root.value;
+            font-size: 13px;
+            font-weight: 500;
+            color: Palette.foreground;
+            horizontal-stretch: 0;
+        }
+    }
+    track := Rectangle {
+        height: 8px;
+        border-radius: 4px;
+        background: Tone.track;
+        Rectangle {
+            x: 0px;
+            y: 0px;
+            width: track.width * root.ratio;
+            height: track.height;
+            border-radius: 4px;
+            background: root.fill;
+        }
+        if root.tick-shown: Rectangle {
+            x: track.width * root.tick-ratio - 1px;
+            y: -3px;
+            width: 2px;
+            height: track.height + 6px;
+            border-radius: 1px;
+            background: Palette.foreground;
+            opacity: 0.7;
+        }
+    }
+}
+
+/// Selectable strategy card. Extra controls (the custom field) are injected
+/// through `@children`, so the card itself stays free of special cases.
+component StrategyCard inherits Rectangle {
+    in property <string> label;
+    in property <string> note;
+    in property <string> description;
+    in property <bool> selected;
+    in property <bool> enabled: true;
+    out property <bool> has-focus: scope.has-focus;
+    forward-focus: scope;
+    callback activate();
+
+    border-radius: 10px;
+    // Selection is carried by the radio dot, a soft accent wash and a light
+    // outline; focus is the only state allowed to draw a loud ring, so the
+    // unselected cards never compete with the choice the player made.
+    border-width: scope.has-focus ? 2px : 1px;
+    border-color: scope.has-focus ? Palette.accent-background
+        : root.selected ? Tone.accent-line : Tone.hairline;
+    background: root.selected ? Tone.accent-wash : Tone.surface;
+    opacity: root.enabled ? 1.0 : 0.5;
+    accessible-role: button;
+    accessible-label: root.note == "" ? root.label : root.label + " " + root.note;
+    accessible-description: root.description;
+    accessible-enabled: root.enabled;
+    // The three cards are one exclusive choice, so assistive tools need the
+    // selected state and an invokable default action, not just a label.
+    accessible-checkable: true;
+    accessible-checked: root.selected;
+    accessible-action-default => {
+        if (root.enabled) {
+            scope.focus();
+            root.activate();
+        }
+    }
+
+    scope := FocusScope {
+        enabled: root.enabled;
+        key-pressed(event) => {
+            if (event.text == Key.Space || event.text == Key.Return) {
+                root.activate();
+                return EventResult.accept;
+            }
+            return EventResult.reject;
+        }
+
+        TouchArea {
+            enabled: root.enabled;
+            mouse-cursor: MouseCursor.pointer;
+            clicked => {
+                scope.focus();
+                root.activate();
+            }
+        }
+
+        VerticalLayout {
+            padding: 12px;
+            spacing: 7px;
+
+            HorizontalLayout {
+                spacing: 10px;
+                VerticalLayout {
+                    alignment: center;
+                    horizontal-stretch: 0;
+                    Rectangle {
+                        width: 16px;
+                        height: 16px;
+                        border-radius: 8px;
+                        border-width: root.selected ? 2px : 1px;
+                        border-color: root.selected ? Palette.accent-background : Tone.outline;
+                        Rectangle {
+                            x: 4px;
+                            y: 4px;
+                            width: 8px;
+                            height: 8px;
+                            border-radius: 4px;
+                            background: Palette.accent-background;
+                            visible: root.selected;
+                        }
+                    }
+                }
+                Text {
+                    text: root.label;
+                    font-size: 14px;
+                    font-weight: 500;
+                    color: Palette.foreground;
+                    vertical-alignment: center;
+                    horizontal-stretch: 0;
+                    wrap: word-wrap;
+                }
+                Text {
+                    text: root.note;
+                    font-size: 13px;
+                    color: Palette.foreground;
+                    opacity: 0.68;
+                    vertical-alignment: center;
+                    horizontal-stretch: 1;
+                    wrap: word-wrap;
+                }
+            }
+
+            @children
+
+            Text {
+                text: root.description;
+                font-size: 12px;
+                color: Palette.foreground;
+                opacity: 0.68;
+                wrap: word-wrap;
+            }
+        }
+    }
+}
+
+export component AppWindow inherits Window {
+    // ---- state pushed in from Rust -------------------------------------
+    in property <Texts> texts;
+    in property <MemoryView> memory;
+    in property <StrategyView> strategy;
+    in property <DialogView> dialog;
+    in property <[string]> languages;
+    in-out property <int> language-index;
+    in property <string> theme-label;
+    in property <[string]> themes;
+    in-out property <int> theme-index: 0;
+    changed theme-index => {
+        Palette.color-scheme = root.theme-index == 1 ? ColorScheme.light
+            : root.theme-index == 2 ? ColorScheme.dark : ColorScheme.unknown;
+    }
+    in property <int> mode;                        // 0 heavy, 1 balanced, 2 custom
+    in-out property <string> custom-text;
+    in property <bool> busy;
+    in property <string> busy-text;
+    in property <string> path-text;
+    in property <bool> path-muted;
+    in property <string> problem-title;
+    in property <[string]> problem-lines;
+    in property <string> warn-title;
+    in property <[string]> warnings;
+    in property <int> status-kind: 1;
+    in property <string> status-title;
+    in property <[string]> status-lines;
+    in property <string> alert-title;
+    in property <[string]> alert-lines;
+    in property <[string]> dialog-warnings;
+    in property <[string]> install-options;
+    in-out property <int> install-index;
+    in property <string> source-url;
+    in property <string> license-text;
+    in property <string> about-copyright;
+    in property <string> about-license;
+    in property <string> about-slint;
+    in property <string> about-source-label;
+    in property <string> about-license-label;
+
+    // ---- events handed back to Rust ------------------------------------
+    callback choose-folder();
+    callback reload();
+    callback select-mode(int);
+    callback custom-edited(string);
+    callback apply-clicked();
+    callback restore-clicked();
+    callback confirm-dialog();
+    callback cancel-dialog();
+    callback select-language(int);
+    callback open-about();
+
+    /// Background controls are dead while a modal is up or work is running.
+    property <bool> interactive: !root.dialog.open && !root.busy;
+    property <bool> method-expanded: false;
+    /// One breakpoint for the whole window: below it the header controls and
+    /// the two columns all fold into a single stack.
+    property <bool> narrow: root.width < 940px;
+
+    public function focus-custom() {
+        custom-input.focus();
+    }
+
+    public function focus-dialog-trigger(kind: int) {
+        if kind == 0 && root.strategy.apply-enabled {
+            apply-action.focus();
+        } else if kind == 1 && root.strategy.restore-enabled {
+            restore-action.focus();
+        } else if kind == 3 {
+            about-action.focus();
+        } else {
+            choose-action.focus();
+        }
+    }
+
+    title: root.texts.window-title;
+    icon: @image-url("../assets/app-icon.png");
+    default-font-family: root.texts.font-family;
+    background: Palette.background;
+    preferred-width: 1120px;
+    preferred-height: 760px;
+    min-width: 540px;
+    min-height: 360px;
+
+    VerticalLayout {
+        // ---- header ----------------------------------------------------
+        // Placed by hand rather than by a layout: the picker row has to move
+        // below the title on narrow windows, and keeping a single instance of
+        // every control lets `focus-dialog-trigger` still reach the about
+        // button. The row claims no spare height, so the body gets it all.
+        header := Rectangle {
+            vertical-stretch: 0;
+            property <length> content-row-height: max(brand.height, controls.height);
+            height: root.narrow
+                ? brand.height + controls.height + 10px + 28px
+                : self.content-row-height + 28px;
+
+            brand := HorizontalLayout {
+                x: 18px;
+                y: root.narrow ? 14px : 14px + (header.content-row-height - self.height) / 2;
+                width: root.narrow
+                    ? parent.width - 36px
+                    : parent.width - 52px - controls.width;
+                height: self.preferred-height;
+                spacing: 12px;
+
+                Icon {
+                    // The application mark keeps its own colours: `transparent`
+                    // is how Slint says "do not tint this image".
+                    source: @image-url("../assets/app-icon.png");
+                    size: 34px;
+                    tint: transparent;
+                    alignment: start;
+                }
+                VerticalLayout {
+                    alignment: start;
+                    horizontal-stretch: 1;
+                    spacing: 3px;
+                    Text {
+                        text: root.texts.app-title;
+                        font-size: 19px;
+                        font-weight: 500;
+                        letter-spacing: 0.2px;
+                        color: Palette.foreground;
+                        wrap: word-wrap;
+                    }
+                    // Progress replaces the subtitle instead of pushing a third
+                    // line into the header, so the chrome never jumps mid-run.
+                    if !root.busy: Hint {
+                        text: root.texts.app-subtitle;
+                    }
+                    if root.busy: Text {
+                        text: root.busy-text;
+                        font-size: 12px;
+                        font-weight: 500;
+                        color: Palette.accent-background;
+                        wrap: word-wrap;
+                    }
+                }
+            }
+
+            controls := HorizontalLayout {
+                x: root.narrow ? 18px : parent.width - 18px - self.width;
+                y: root.narrow
+                    ? brand.y + brand.height + 10px
+                    : 14px + (header.content-row-height - self.height) / 2;
+                width: self.preferred-width;
+                height: self.preferred-height;
+                spacing: 8px;
+
+                Icon {
+                    source: Ico.languages;
+                    dim: 0.65;
+                }
+                ComboBox {
+                    width: 150px;
+                    model: root.languages;
+                    current-index <=> root.language-index;
+                    enabled: root.interactive;
+                    accessible-label: root.texts.language-label;
+                    selected(value) => {
+                        root.select-language(self.current-index);
+                    }
+                }
+                Icon {
+                    // The glyph mirrors the current choice, which is what keeps
+                    // the picker legible after dropping the written caption.
+                    source: root.theme-index == 1 ? Ico.sun
+                        : root.theme-index == 2 ? Ico.moon : Ico.monitor;
+                    dim: 0.65;
+                }
+                ComboBox {
+                    width: 132px;
+                    model: root.themes;
+                    current-index <=> root.theme-index;
+                    enabled: root.interactive;
+                    accessible-label: root.theme-label;
+                }
+                about-action := Button {
+                    text: root.texts.about-open;
+                    icon: Ico.info;
+                    icon-size: 16px;
+                    colorize-icon: true;
+                    enabled: root.interactive;
+                    clicked => {
+                        root.open-about();
+                    }
+                }
+            }
+        }
+
+        // ---- scrollable body ------------------------------------------
+        sv := AutoScrollView {
+            enabled: root.interactive;
+            vertical-stretch: 1;
+
+            Rectangle {
+                width: sv.visible-width;
+                height: root.narrow
+                    ? left-column.preferred-height + right-column.preferred-height + 48px
+                    : max(left-column.preferred-height, right-column.preferred-height) + 32px;
+
+                // ======================= left column =======================
+                left-column := VerticalLayout {
+                    x: 16px;
+                    y: 16px;
+                    width: root.narrow ? parent.width - 32px : (parent.width - 48px) / 2;
+                    height: self.preferred-height;
+                    spacing: 18px;
+                    alignment: start;
+
+                    VerticalLayout {
+                        spacing: 10px;
+                        SectionTitle {
+                            text: root.texts.location-title;
+                        }
+                        Panel {
+                            VerticalLayout {
+                                padding: 12px;
+                                Text {
+                                    text: root.path-text;
+                                    font-size: 13px;
+                                    color: Palette.foreground;
+                                    opacity: root.path-muted ? 0.65 : 1.0;
+                                    wrap: word-wrap;
+                                }
+                            }
+                        }
+                        if root.problem-title != "": Callout {
+                            kind: 4;
+                            title: root.problem-title;
+                            lines: root.problem-lines;
+                        }
+                        HorizontalLayout {
+                            spacing: 8px;
+                            alignment: start;
+                            choose-action := Button {
+                                changed has-focus => { if self.has-focus { sv.reveal(self.absolute-position.y, self.height); } }
+                                text: root.texts.location-choose;
+                                icon: Ico.folder;
+                                icon-size: 16px;
+                                colorize-icon: true;
+                                enabled: root.interactive;
+                                clicked => {
+                                    root.choose-folder();
+                                }
+                            }
+                            Button {
+                                text: root.texts.location-reload;
+                                icon: Ico.refresh;
+                                icon-size: 16px;
+                                colorize-icon: true;
+                                changed has-focus => { if self.has-focus { sv.reveal(self.absolute-position.y, self.height); } }
+                                enabled: root.interactive;
+                                clicked => {
+                                    root.reload();
+                                }
+                            }
+                        }
+                    }
+
+                    VerticalLayout {
+                        spacing: 10px;
+                        SectionTitle {
+                            text: root.texts.memory-title;
+                            icon: Ico.memory;
+                        }
+
+                        Panel {
+                            VerticalLayout {
+                                padding: 14px;
+                                spacing: 16px;
+
+                                HorizontalLayout {
+                                    spacing: 16px;
+                                    Readout {
+                                        label: root.texts.memory-total;
+                                        value: root.memory.total;
+                                        horizontal-stretch: 1;
+                                    }
+                                    Readout {
+                                        label: root.texts.memory-free;
+                                        value: root.memory.free;
+                                        horizontal-stretch: 1;
+                                    }
+                                }
+                                HorizontalLayout {
+                                    spacing: 16px;
+                                    Readout {
+                                        label: root.texts.memory-current;
+                                        value: root.memory.current;
+                                        horizontal-stretch: 1;
+                                    }
+                                    Readout {
+                                        label: root.memory.rec-label;
+                                        value: root.memory.rec-value;
+                                        accent: true;
+                                        horizontal-stretch: 1;
+                                    }
+                                }
+
+                                if root.memory.chart-shown: VerticalLayout {
+                                    spacing: 14px;
+
+                                    Bar {
+                                        label: root.texts.chart-system;
+                                        value: root.memory.total-label;
+                                        ratio: root.memory.used-ratio;
+                                        fill: Tone.bar;
+                                        tick-shown: false;
+                                        tick-ratio: 0;
+                                    }
+                                    HorizontalLayout {
+                                        spacing: 16px;
+                                        Hint {
+                                            text: root.memory.legend-used;
+                                            horizontal-stretch: 0;
+                                        }
+                                        Hint {
+                                            text: root.memory.legend-free;
+                                            horizontal-stretch: 1;
+                                        }
+                                    }
+
+                                    Bar {
+                                        label: root.texts.chart-pending;
+                                        value: root.memory.pending-label;
+                                        ratio: root.memory.pending-shown ? root.memory.pending-ratio : 0;
+                                        fill: Palette.accent-background;
+                                        tick-shown: root.memory.rec-shown;
+                                        tick-ratio: root.memory.rec-ratio;
+                                    }
+                                    Hint {
+                                        text: root.memory.legend-tick;
+                                    }
+
+                                    HorizontalLayout {
+                                        Hint {
+                                            text: root.texts.chart-axis-min;
+                                            horizontal-stretch: 0;
+                                        }
+                                        Rectangle {
+                                            horizontal-stretch: 1;
+                                        }
+                                        Hint {
+                                            text: root.memory.axis-max;
+                                            horizontal-stretch: 0;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Hint {
+                            text: root.texts.strategy-note;
+                        }
+
+                        HorizontalLayout {
+                            alignment: start;
+                            Button {
+                                text: root.texts.method-label;
+                                icon: root.method-expanded ? Ico.chevron-down : Ico.chevron-right;
+                                icon-size: 16px;
+                                colorize-icon: true;
+                                changed has-focus => { if self.has-focus { sv.reveal(self.absolute-position.y, self.height); } }
+                                enabled: root.interactive;
+                                accessible-expandable: true;
+                                accessible-expanded: root.method-expanded;
+                                clicked => {
+                                    root.method-expanded = !root.method-expanded;
+                                }
+                            }
+                        }
+                        if root.method-expanded: VerticalLayout {
+                            spacing: 8px;
+                            Hint {
+                                text: root.texts.heavy-description;
+                            }
+                            Hint {
+                                text: root.texts.balanced-description;
+                            }
+                            Hint {
+                                text: root.texts.custom-description;
+                            }
+                        }
+                    }
+                }
+
+                // ====================== right column =======================
+                right-column := VerticalLayout {
+                    x: root.narrow ? 16px : left-column.x + left-column.width + 16px;
+                    y: root.narrow ? left-column.y + left-column.height + 16px : 16px;
+                    width: left-column.width;
+                    height: self.preferred-height;
+                    spacing: 10px;
+                    alignment: start;
+
+                    SectionTitle {
+                        text: root.texts.strategy-title;
+                        icon: Ico.sliders;
+                    }
+
+                    StrategyCard {
+                        changed has-focus => { if self.has-focus { sv.reveal(self.absolute-position.y, self.height); } }
+                        label: root.texts.heavy-label;
+                        note: root.strategy.heavy-note;
+                        description: root.texts.heavy-summary;
+                        selected: root.mode == 0;
+                        enabled: root.strategy.heavy-enabled && root.interactive;
+                        activate => {
+                            root.select-mode(0);
+                        }
+                    }
+
+                    StrategyCard {
+                        changed has-focus => { if self.has-focus { sv.reveal(self.absolute-position.y, self.height); } }
+                        label: root.texts.balanced-label;
+                        note: root.strategy.balanced-note;
+                        description: root.texts.balanced-summary;
+                        selected: root.mode == 1;
+                        enabled: root.strategy.balanced-enabled && root.interactive;
+                        activate => {
+                            root.select-mode(1);
+                        }
+                    }
+
+                    StrategyCard {
+                        changed has-focus => { if self.has-focus { sv.reveal(self.absolute-position.y, self.height); } }
+                        label: root.texts.custom-label;
+                        note: "";
+                        description: root.texts.custom-summary;
+                        selected: root.mode == 2;
+                        enabled: root.strategy.custom-enabled && root.interactive;
+                        activate => {
+                            root.select-mode(2);
+                        }
+
+                        HorizontalLayout {
+                            spacing: 8px;
+                            padding-left: 26px;
+                            alignment: start;
+                            custom-input := LineEdit {
+                                changed has-focus => { if self.has-focus { sv.reveal(self.absolute-position.y, self.height); } }
+                                width: 130px;
+                                placeholder-text: root.texts.custom-placeholder;
+                                enabled: root.strategy.custom-enabled && root.interactive;
+                                accessible-label: root.texts.custom-label + " " + root.texts.unit-gb;
+                                text <=> root.custom-text;
+                                edited(value) => {
+                                    root.custom-edited(value);
+                                }
+                                accepted(value) => {
+                                    root.apply-clicked();
+                                }
+                            }
+                            Text {
+                                text: root.texts.unit-gb;
+                                font-size: 13px;
+                                color: Palette.foreground;
+                                opacity: 0.8;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+
+                    Hint {
+                        text: root.texts.custom-hint;
+                    }
+                    if root.strategy.custom-error != "": Text {
+                        text: root.strategy.custom-error;
+                        font-size: 12px;
+                        color: #e5484d;
+                        wrap: word-wrap;
+                    }
+
+                    Panel {
+                        accessible-role: text;
+                        accessible-label: root.strategy.diff-a11y;
+                        HorizontalLayout {
+                            padding: 14px;
+                            spacing: 10px;
+                            alignment: start;
+                            Text {
+                                text: root.texts.diff-label;
+                                font-size: 12px;
+                                color: Palette.foreground;
+                                opacity: 0.62;
+                                vertical-alignment: center;
+                                horizontal-stretch: 0;
+                            }
+                            if root.strategy.diff-from != "": Text {
+                                text: root.strategy.diff-from;
+                                font-size: 20px;
+                                font-weight: 500;
+                                color: Palette.foreground;
+                                opacity: 0.75;
+                                vertical-alignment: center;
+                                horizontal-stretch: 0;
+                            }
+                            if root.strategy.diff-to != "": Icon {
+                                source: Ico.chevron-right;
+                                size: 16px;
+                                dim: 0.5;
+                            }
+                            if root.strategy.diff-to != "": Text {
+                                text: root.strategy.diff-to;
+                                font-size: 20px;
+                                font-weight: 500;
+                                color: Palette.accent-background;
+                                vertical-alignment: center;
+                                horizontal-stretch: 0;
+                            }
+                            if root.strategy.diff-note != "": Text {
+                                text: root.strategy.diff-note;
+                                font-size: 12px;
+                                color: Palette.foreground;
+                                opacity: 0.8;
+                                vertical-alignment: center;
+                                horizontal-stretch: 1;
+                                wrap: word-wrap;
+                            }
+                            Rectangle {
+                                horizontal-stretch: 1;
+                            }
+                        }
+                    }
+
+                    if root.warn-title != "": Callout {
+                        kind: 3;
+                        title: root.warn-title;
+                        lines: root.warnings;
+                    }
+
+                    HorizontalLayout {
+                        spacing: 8px;
+                        alignment: start;
+                        apply-action := Button {
+                            changed has-focus => { if self.has-focus { sv.reveal(self.absolute-position.y, self.height); } }
+                            text: root.strategy.apply-label;
+                            icon: Ico.check;
+                            icon-size: 16px;
+                            colorize-icon: true;
+                            primary: true;
+                            enabled: root.strategy.apply-enabled && root.interactive;
+                            clicked => {
+                                root.apply-clicked();
+                            }
+                        }
+                        restore-action := Button {
+                            changed has-focus => { if self.has-focus { sv.reveal(self.absolute-position.y, self.height); } }
+                            text: root.texts.action-restore;
+                            icon: Ico.restore;
+                            icon-size: 16px;
+                            colorize-icon: true;
+                            enabled: root.strategy.restore-enabled && root.interactive;
+                            clicked => {
+                                root.restore-clicked();
+                            }
+                        }
+                    }
+
+                    HorizontalLayout {
+                        spacing: 8px;
+                        Icon {
+                            alignment: start;
+                            source: Ico.shield;
+                            size: 16px;
+                            dim: 0.55;
+                        }
+                        Hint {
+                            text: root.strategy.backup-note;
+                            horizontal-stretch: 1;
+                        }
+                    }
+
+                    if root.status-title != "": Callout {
+                        kind: root.status-kind;
+                        title: root.status-title;
+                        lines: root.status-lines;
+                    }
+                    if root.alert-title != "": Callout {
+                        kind: 4;
+                        title: root.alert-title;
+                        lines: root.alert-lines;
+                    }
+                }
+            }
+        }
+    }
+
+    // ---- modal surface -------------------------------------------------
+    if root.dialog.open: Rectangle {
+        background: #00000073;
+
+        TouchArea {
+            mouse-cursor: MouseCursor.default;
+        }
+
+        keys := FocusScope {
+            focus-on-tab-navigation: false;
+            // Focus enters the modal here, which keeps Escape working even if
+            // the button below never takes focus. The cancel button claims it
+            // afterwards (init code runs in tree order), so assistive tools
+            // announce a named, safe action instead of a bare focus scope.
+            init => {
+                keys.focus();
+            }
+            key-pressed(event) => {
+                if (event.text == Key.Escape) {
+                    root.cancel-dialog();
+                    return EventResult.accept;
+                }
+                return EventResult.reject;
+            }
+
+            VerticalLayout {
+                alignment: center;
+                HorizontalLayout {
+                    alignment: center;
+                    Rectangle {
+                        width: root.width > 620px ? 560px : root.width - 48px;
+                        background: Palette.background;
+                        border-radius: 12px;
+                        border-width: 1px;
+                        border-color: Tone.hairline;
+
+                        VerticalLayout {
+                            padding: 22px;
+                            spacing: 14px;
+
+                            Text {
+                                text: root.dialog.title;
+                                font-size: 17px;
+                                font-weight: 500;
+                                letter-spacing: 0.2px;
+                                color: Palette.foreground;
+                                wrap: word-wrap;
+                            }
+
+                            dialog-body := AutoScrollView {
+                                height: root.dialog.kind == 3
+                                    ? min(560px, root.height - 190px)
+                                    : min(300px, root.height - 190px);
+                                VerticalLayout {
+                                    width: dialog-body.visible-width;
+                                    spacing: 12px;
+                                    if root.dialog.detail != "": Body {
+                                        text: root.dialog.detail;
+                                    }
+                                    if root.dialog.warn-title != "": Callout {
+                                        kind: 3;
+                                        title: root.dialog.warn-title;
+                                        lines: root.dialog-warnings;
+                                    }
+                                    if root.dialog.kind == 2: VerticalLayout {
+                                        spacing: 6px;
+                                        Hint { text: root.dialog.label; }
+                                        ComboBox {
+                                            model: root.install-options;
+                                            current-index <=> root.install-index;
+                                            accessible-label: root.dialog.label;
+                                        }
+                                    }
+                                    if root.dialog.kind == 3: VerticalLayout {
+                                        spacing: 10px;
+                                        Body { text: root.about-copyright; }
+                                        Body { text: root.about-license; }
+                                        Body { text: root.about-slint; }
+                                        Hint { text: root.about-source-label; }
+                                        LineEdit {
+                                            read-only: true;
+                                            changed has-focus => { if self.has-focus { dialog-body.reveal(self.absolute-position.y, self.height); } }
+                                            text: root.source-url;
+                                            accessible-label: root.about-source-label;
+                                        }
+                                        Hint { text: root.about-license-label; }
+                                        Text {
+                                            text: root.license-text;
+                                            font-size: 11px;
+                                            color: Palette.foreground;
+                                            opacity: 0.8;
+                                            wrap: word-wrap;
+                                        }
+                                    }
+                                    if root.dialog.note != "": Hint {
+                                        text: root.dialog.note;
+                                    }
+                                }
+                            }
+
+                            HorizontalLayout {
+                                spacing: 8px;
+                                alignment: end;
+                                Button {
+                                    init => {
+                                        self.focus();
+                                    }
+                                    text: root.dialog.cancel;
+                                    clicked => {
+                                        root.cancel-dialog();
+                                    }
+                                }
+                                if root.dialog.confirm != "": Button {
+                                    text: root.dialog.confirm;
+                                    primary: true;
+                                    enabled: root.dialog.confirm-enabled;
+                                    clicked => {
+                                        root.confirm-dialog();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

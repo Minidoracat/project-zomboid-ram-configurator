@@ -1,21 +1,59 @@
 # Project Zomboid RAM Configurator
 
-[繁體中文說明](README_zh-TW.md)
+[English](README.md) · [繁體中文](README_zh-TW.md) · [简体中文](README_zh-CN.md)
 
 A Windows tool for Project Zomboid players to adjust the **client's Java heap limit** (`-Xmx`), including memory-hungry mod lists and modded servers.
 
-## Download and run
+![PZ-inspired RAM Configurator artwork: a zombie hand gripping a weathered RAM module](gui/assets/app-icon-source.webp)
+
+## BAT download and run
 
 1. Download [English: PZ_Memory_Configurator_EN_US.bat](https://github.com/Minidoracat/project-zomboid-ram-configurator/releases/latest/download/PZ_Memory_Configurator_EN_US.bat), or [Traditional Chinese: PZ_Memory_Configurator_ZH_TW.bat](https://github.com/Minidoracat/project-zomboid-ram-configurator/releases/latest/download/PZ_Memory_Configurator_ZH_TW.bat). These links download the latest stable release directly; do not save a GitHub HTML page.
-2. **Only one `.bat` in your preferred language is needed. No accompanying `.ps1` is required.** If using Code → Download ZIP, extract it first and take the `.bat` you want.
-3. Close the game and wait for Steam updates or verification to finish.
-4. Double-click `PZ_Memory_Configurator_EN_US.bat`. The Traditional Chinese launcher is `PZ_Memory_Configurator_ZH_TW.bat`.
+2. **The Simplified Chinese launcher `PZ_Memory_Configurator_ZH_CN.bat` exists in the repository source / local build output only. It is not part of the v2.0.0 GitHub Release, so there is no `latest/download` URL for it.** Get it from this repo or generate it locally with `Build-Standalone.ps1`. Do not invent a Releases download link for an unpublished file.
+3. **Only one `.bat` in your preferred language is needed. No accompanying `.ps1` is required.** If using Code → Download ZIP, extract it first and take the `.bat` you want. A `PZ_Memory_Configurator_ZH_CN.bat` inside the ZIP is the source copy, not a GitHub Release asset.
+4. Close the game and wait for Steam updates or verification to finish.
+5. Double-click `PZ_Memory_Configurator_EN_US.bat`. The Traditional Chinese launcher is `PZ_Memory_Configurator_ZH_TW.bat`. For the unpublished Simplified Chinese launcher, double-click the local `PZ_Memory_Configurator_ZH_CN.bat`.
 
 No Python, Java installation or additional packages are needed. The tool uses Windows PowerShell 5.1, not WMIC. The target is 64-bit Windows 10/11; this revision was verified on Windows 11. Windows 7, Linux and macOS are not supported.
 
 The launchers use `-NoProfile`, so your personal PowerShell startup scripts are not loaded. `-ExecutionPolicy Bypass` applies only to that PowerShell process: it does not change your permanent execution policy or override organizational policy. Only run downloads from sources you trust.
 
-Current version: **v2.0.0**. See [Releases](https://github.com/Minidoracat/project-zomboid-ram-configurator/releases) for release history and standalone downloads. The repository has been renamed; the familiar `.bat` filenames are unchanged.
+Current version: **v2.0.0**. See [Releases](https://github.com/Minidoracat/project-zomboid-ram-configurator/releases) for release history and standalone downloads. That release currently ships only the English and Traditional Chinese BAT files. The repository has been renamed; the familiar `.bat` filenames are unchanged.
+
+## Rust + Slint GUI (local build, not yet released)
+
+The GUI and BAT work independently. The GUI provides three strategies, Traditional Chinese/English/Simplified Chinese, System/Light/Dark appearance, and a two-column layout that becomes a single column in narrow windows. Choices only update pending values until confirmed. Normal window closing is blocked while file operations are running.
+
+![English native GUI preview](gui/screenshots/en.png)
+
+Native GUI screenshot using a sample configuration. Memory figures depend on the computer and its current usage.
+
+The interface embeds Noto Sans TC and Noto Sans SC Regular/Medium (weights 400/500) and Lucide operation icons; players do not need to install fonts or copy an assets folder. The EXE, taskbar and window header use the same original, PZ-inspired weathered RAM/zombie-hand icon, not an official Project Zomboid logo.
+
+Developers need Rust 1.92+ and Microsoft C++ Build Tools. Players do not need Rust, .NET or WebView2 installed. The Windows x64 build uses a static CRT, but still needs Windows system DLLs and a working OpenGL driver. An unsigned EXE may show a SmartScreen warning; zero antivirus false positives are not guaranteed.
+
+From the repository root:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Build-Gui.ps1
+```
+
+The standalone output is `gui\dist\pz-ram-configurator.exe`. To select a folder and UI language (`zh-TW`, `en`, `zh-CN`) explicitly:
+
+```powershell
+.\gui\dist\pz-ram-configurator.exe --game-dir "D:\SteamLibrary\steamapps\common\ProjectZomboid" --language en
+```
+
+Heavy mods uses 80% and Leave room for other apps uses 50%, each capped at installed RAM minus 4 GB and rounded down. Neither automatic recommendation is offered below 8 GB. These are starting policies, not benchmarks; BAT behavior is unchanged. Confirmed target/backup changes are rejected, but the short compare-to-commit window is not a cross-process atomic compare-and-swap. Preserve recovery files if Windows reports a partial replacement failure.
+
+Run native tests and static checks from `gui` so its `.cargo/config.toml` static-CRT settings apply:
+
+```powershell
+cargo test --release --locked
+cargo clippy --all-targets --locked -- -D warnings
+```
+
+Translations live in `gui/locales` (`zh-TW`, `en`, `zh-CN`). Add a complete JSON catalog and register it in `BUNDLED` in `gui/src/i18n.rs`; preserve message keys/parameters and verify longer text and keyboard navigation. UI resources, translations and license text are embedded; no adjacent JSON or PowerShell files are required.
 
 ## Using the tool
 
@@ -25,6 +63,8 @@ The tool searches Steam and its libraries, then displays the game path, installe
 - If discovery fails, enter or drag in the game folder. It must contain `ProjectZomboid64.json` or its `.bak` backup. A backup-only folder can still enter the restore workflow.
 - Spaces, Chinese characters, apostrophes, brackets and exclamation marks in paths are supported.
 
+BAT menu:
+
 | Option | Action |
 | --- | --- |
 | 1 | Apply the heavy-mod recommendation |
@@ -33,6 +73,8 @@ The tool searches Steam and its libraries, then displays the game path, installe
 | 0 | Quit |
 
 Applying or restoring requires confirmation. Only `y` proceeds; Enter or another response cancels. Changes take effect on the next game launch. The tool never lowers your current setting automatically.
+
+The GUI uses on-window strategies, confirm buttons and restore — not this numbered menu. Three strategies, appearance and language switching belong to the GUI; BAT still has only the options above, with unchanged strategies.
 
 ## Heavy-mod recommendation
 
@@ -74,7 +116,7 @@ Steam updates or game verification may reset the limit; open the tool again to c
 
 ## Development and verification
 
-Maintain the shared logic only in `PZ_Memory_Configurator.ps1`. `Build-Standalone.ps1` embeds that same core into both root-level `.bat` files. Do not edit the generated `.bat` files directly. They contain readable source and execute the core in memory, without downloading code or creating a temporary `.ps1`.
+Maintain the shared logic only in `PZ_Memory_Configurator.ps1`. `Build-Standalone.ps1` embeds that same core into the three root-level `.bat` files (`PZ_Memory_Configurator_ZH_TW.bat`, `PZ_Memory_Configurator_EN_US.bat`, `PZ_Memory_Configurator_ZH_CN.bat`). Do not edit the generated `.bat` files directly. They contain readable source and execute the core in memory, without downloading code or creating a temporary `.ps1`.
 
 After editing the core, regenerate the standalone files locally (this does not upload anything or create a Release):
 
@@ -82,7 +124,7 @@ After editing the core, regenerate the standalone files locally (this does not u
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Build-Standalone.ps1
 ```
 
-Use `-OutputDirectory "D:\PZ-release"` for another output folder. Publish the two generated `.bat` assets; players only need one.
+Use `-OutputDirectory "D:\PZ-release"` for another output folder. The local build produces three `.bat` files; **v2.0.0 currently publishes only Traditional Chinese and English.** Players downloading from Releases need only one of those two. `PZ_Memory_Configurator_ZH_CN.bat` remains a local/source copy and is not in that release.
 
 Run the isolated regression checks; they do not modify real game settings:
 
@@ -91,9 +133,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tests\MemoryConfigurat
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tests\Standalone.Tests.ps1
 ```
 
-The standalone checks verify that root-level `.bat` files match the current core, packaging is reproducible, and both languages start and immediately quit from an isolated folder with no `.ps1`. They also check nonzero exit codes for truncated downloads. These checks may read local Steam/game information but never modify game settings.
+The standalone checks verify that root-level `.bat` files match the current core, packaging is reproducible, and the generated launchers start and immediately quit from an isolated folder with no `.ps1`. They also check nonzero exit codes for truncated downloads. These checks may read local Steam/game information but never modify game settings.
 
-To open the interactive tool for a specific directory:
+To open the interactive tool for a specific directory, BAT language codes are `en-US`, `zh-TW`, and `zh-CN`:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\PZ_Memory_Configurator.ps1 -Language en-US -GameDirectory "D:\SteamLibrary\steamapps\common\ProjectZomboid"
@@ -103,6 +145,14 @@ This is the real configuration workflow and still asks for confirmation before w
 
 A real file-lock failure was also exercised to check recovery-file retention. Windows partial-replacement errors `1176`/`1177` and power-loss scenarios were not reproduced.
 
-## Sharing and support
+## License
 
-You are welcome to share this tool; please credit the source. Report problems in a GitHub issue or on [Discord](https://discord.gg/Gur2V67). Include the error, Windows version, game version and launch method. Redact personal information from paths before sharing them.
+This project is licensed under **GNU GPL version 3 only** (`GPL-3.0-only`); see [LICENSE](LICENSE). Use, study, modification and commercial use are allowed. Redistribution must comply with the GPL, preserve notices, and provide corresponding source/build information: the PowerShell core and packager for BAT, and the `gui` source, resources, `Cargo.lock`, build configuration and required dependency license/source information for the GUI. Embedding the license text in an EXE does not by itself fulfill every redistribution obligation.
+
+Bundled Noto Sans TC/SC fonts retain the **SIL Open Font License 1.1**; Lucide icons retain their **ISC / Feather MIT** notices. Full notices are available in **About / License** inside the EXE. `Build-Gui.ps1` also copies `LICENSE.txt`, `NotoSansCJK-LICENSE.txt` and `Lucide-LICENSE.txt` into `gui/dist`; these are distribution notices, not runtime dependencies. Asset origins are recorded under `gui/assets`.
+
+This license statement applies to the current source code. It does not retroactively revoke permissions already granted for previously published releases.
+
+## Support
+
+Report problems in a GitHub issue or on [Discord](https://discord.gg/Gur2V67). Include the error, Windows version, game version and launch method. Redact personal information from paths before sharing them.
