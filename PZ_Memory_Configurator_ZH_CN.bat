@@ -32,7 +32,7 @@ param(
 )
 
 Add-Type -AssemblyName System.Runtime.Serialization
-$script:PzVersion = '2.0.0'
+$script:PzVersion = '2.1.0'
 
 # ---------------------------------------------------------------------------
 # Internal helpers

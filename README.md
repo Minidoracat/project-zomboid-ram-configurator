@@ -8,19 +8,20 @@ A Windows tool for Project Zomboid players to adjust the **client's Java heap li
 
 ## BAT download and run
 
-1. Download [English: PZ_Memory_Configurator_EN_US.bat](https://github.com/Minidoracat/project-zomboid-ram-configurator/releases/latest/download/PZ_Memory_Configurator_EN_US.bat), or [Traditional Chinese: PZ_Memory_Configurator_ZH_TW.bat](https://github.com/Minidoracat/project-zomboid-ram-configurator/releases/latest/download/PZ_Memory_Configurator_ZH_TW.bat). These links download the latest stable release directly; do not save a GitHub HTML page.
-2. **The Simplified Chinese launcher `PZ_Memory_Configurator_ZH_CN.bat` exists in the repository source / local build output only. It is not part of the v2.0.0 GitHub Release, so there is no `latest/download` URL for it.** Get it from this repo or generate it locally with `Build-Standalone.ps1`. Do not invent a Releases download link for an unpublished file.
-3. **Only one `.bat` in your preferred language is needed. No accompanying `.ps1` is required.** If using Code → Download ZIP, extract it first and take the `.bat` you want. A `PZ_Memory_Configurator_ZH_CN.bat` inside the ZIP is the source copy, not a GitHub Release asset.
-4. Close the game and wait for Steam updates or verification to finish.
-5. Double-click `PZ_Memory_Configurator_EN_US.bat`. The Traditional Chinese launcher is `PZ_Memory_Configurator_ZH_TW.bat`. For the unpublished Simplified Chinese launcher, double-click the local `PZ_Memory_Configurator_ZH_CN.bat`.
+1. Download one standalone BAT: [English](https://github.com/Minidoracat/project-zomboid-ram-configurator/releases/latest/download/PZ_Memory_Configurator_EN_US.bat), [Traditional Chinese](https://github.com/Minidoracat/project-zomboid-ram-configurator/releases/latest/download/PZ_Memory_Configurator_ZH_TW.bat), or [Simplified Chinese](https://github.com/Minidoracat/project-zomboid-ram-configurator/releases/latest/download/PZ_Memory_Configurator_ZH_CN.bat). These links download the latest stable release directly; do not save a GitHub HTML page.
+2. **Only one `.bat` in your preferred language is needed. No accompanying `.ps1` is required.** If using Code → Download ZIP, extract it first and take the `.bat` you want.
+3. Close the game and wait for Steam updates or verification to finish.
+4. Double-click the downloaded `.bat`.
 
 No Python, Java installation or additional packages are needed. The tool uses Windows PowerShell 5.1, not WMIC. The target is 64-bit Windows 10/11; this revision was verified on Windows 11. Windows 7, Linux and macOS are not supported.
 
 The launchers use `-NoProfile`, so your personal PowerShell startup scripts are not loaded. `-ExecutionPolicy Bypass` applies only to that PowerShell process: it does not change your permanent execution policy or override organizational policy. Only run downloads from sources you trust.
 
-Current version: **v2.0.0**. See [Releases](https://github.com/Minidoracat/project-zomboid-ram-configurator/releases) for release history and standalone downloads. That release currently ships only the English and Traditional Chinese BAT files. The repository has been renamed; the familiar `.bat` filenames are unchanged.
+Current version: **v2.1.0**. See [Releases](https://github.com/Minidoracat/project-zomboid-ram-configurator/releases) for the Windows GUI, all three standalone BAT files, license notices and SHA256 checksums.
 
-## Rust + Slint GUI (local build, not yet released)
+## Rust + Slint GUI
+
+[Download the Windows x64 GUI](https://github.com/Minidoracat/project-zomboid-ram-configurator/releases/latest/download/pz-ram-configurator.exe). Run `pz-ram-configurator.exe` directly; no BAT or external font files are required.
 
 The GUI and BAT work independently. The GUI provides three strategies, Traditional Chinese/English/Simplified Chinese, System/Light/Dark appearance, and a two-column layout that becomes a single column in narrow windows. Choices only update pending values until confirmed. Normal window closing is blocked while file operations are running.
 
@@ -124,7 +125,7 @@ After editing the core, regenerate the standalone files locally (this does not u
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Build-Standalone.ps1
 ```
 
-Use `-OutputDirectory "D:\PZ-release"` for another output folder. The local build produces three `.bat` files; **v2.0.0 currently publishes only Traditional Chinese and English.** Players downloading from Releases need only one of those two. `PZ_Memory_Configurator_ZH_CN.bat` remains a local/source copy and is not in that release.
+Use `-OutputDirectory "D:\PZ-release"` for another output folder. The build produces three standalone `.bat` files; players only need the one in their preferred language.
 
 Run the isolated regression checks; they do not modify real game settings:
 

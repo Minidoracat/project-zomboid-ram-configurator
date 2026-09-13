@@ -8,21 +8,22 @@
 
 ## BAT 下载与运行
 
-1. 从 GitHub Releases 下载已发布的 [繁体中文版 PZ_Memory_Configurator_ZH_TW.bat](https://github.com/Minidoracat/project-zomboid-ram-configurator/releases/latest/download/PZ_Memory_Configurator_ZH_TW.bat)，或 [英文版 PZ_Memory_Configurator_EN_US.bat](https://github.com/Minidoracat/project-zomboid-ram-configurator/releases/latest/download/PZ_Memory_Configurator_EN_US.bat)。以上链接直接下载当前最新正式版，不要另存 GitHub 网页。
-2. **简体中文启动器 `PZ_Memory_Configurator_ZH_CN.bat` 目前只存在于仓库源代码／本地构建产物，尚未随 v2.0.0 正式发布，因此没有 GitHub `latest/download` 链接。** 需要简体中文 BAT 时，请从本仓库取得该文件，或在本地运行 `Build-Standalone.ps1` 生成。不要把尚未发布的文件名拼进 Releases 下载地址。
-3. **只需选用语言的一支 `.bat`，不需要旁边的 `.ps1`。** 若使用 Code → Download ZIP，先解压，再取出要用的 `.bat` 即可。ZIP 里的 `PZ_Memory_Configurator_ZH_CN.bat` 同样是源代码版本，不是 GitHub Release 资源。
-4. 关闭游戏，并等待 Steam 的更新或验证作业完成。
-5. 已发布版本请双击 `PZ_Memory_Configurator_ZH_TW.bat` 或 `PZ_Memory_Configurator_EN_US.bat`。若使用本地／源代码中的简体中文入口，请双击 `PZ_Memory_Configurator_ZH_CN.bat`。
+1. 选择一个独立 BAT 下载：[简体中文](https://github.com/Minidoracat/project-zomboid-ram-configurator/releases/latest/download/PZ_Memory_Configurator_ZH_CN.bat)、[繁体中文](https://github.com/Minidoracat/project-zomboid-ram-configurator/releases/latest/download/PZ_Memory_Configurator_ZH_TW.bat) 或 [English](https://github.com/Minidoracat/project-zomboid-ram-configurator/releases/latest/download/PZ_Memory_Configurator_EN_US.bat)。以上链接直接下载最新正式版，不要另存 GitHub 网页。
+2. **只需选用语言的一个 `.bat`，不需要旁边的 `.ps1`。** 若使用 Code → Download ZIP，先解压，再取出要用的 `.bat` 即可。
+3. 关闭游戏，并等待 Steam 的更新或验证作业完成。
+4. 双击下载的 `.bat`。
 
 无需安装 Python、Java 或其他软件包；使用 Windows PowerShell 5.1，不再依赖 WMIC。目标环境为 Windows 10／11 64 位；本次验证环境为 Windows 11。Windows 7、Linux、macOS 不在支持范围。
 
 `.bat` 使用 `-NoProfile`，不加载个人的 PowerShell 启动脚本。`-ExecutionPolicy Bypass` 只应用到这次 PowerShell 进程，不修改永久执行策略，也不能取代公司／学校的管理策略。只运行你信任来源的下载内容。
 
-当前版本为 **v2.0.0**。完整版本记录与已发布单文件下载请见 [Releases](https://github.com/Minidoracat/project-zomboid-ram-configurator/releases)；该版本目前只有繁体中文与英文两支 BAT。仓库已更名，旧版 `.bat` 文件名保持不变。
+当前版本为 **v2.1.0**。Windows GUI、三语独立 BAT、许可声明与 SHA256 校验和，请见 [Releases](https://github.com/Minidoracat/project-zomboid-ram-configurator/releases)。
 
 本工具的 **BAT** 与 **GUI** 彼此独立：BAT 是命令行启动器；GUI 是 `gui\dist\pz-ram-configurator.exe`。不要把 GUI 的语言参数套到 `.bat`，也不要把 BAT 菜单选项当成 GUI 按钮。
 
-## Rust＋Slint 图形界面（本地版本，尚未发布）
+## Rust＋Slint 图形界面
+
+[下载 Windows x64 GUI](https://github.com/Minidoracat/project-zomboid-ram-configurator/releases/latest/download/pz-ram-configurator.exe)。直接运行 `pz-ram-configurator.exe`，不需要搭配 BAT 或外部字体文件。
 
 GUI 与 BAT 可以独立使用，互不调用。GUI 提供三种策略、繁体中文／English／简体中文、跟随系统／浅色／深色、宽屏双栏与窄屏单栏；切换选项只更新待应用值，确认后才写入。保存期间不允许直接关闭窗口。
 
@@ -126,7 +127,7 @@ Steam 更新或验证游戏后可能重置上限，请重新打开工具检查�
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Build-Standalone.ps1
 ```
 
-可使用 `-OutputDirectory "D:\PZ-release"` 指定输出文件夹。本地会得到三支 `.bat`；**v2.0.0 正式发布目前只提供繁体中文与英文两支**，玩家从 Releases 只需下载其中一支。`PZ_Memory_Configurator_ZH_CN.bat` 仍是本地／源代码版本，尚未发布。
+可使用 `-OutputDirectory "D:\PZ-release"` 指定输出文件夹。构建会生成三语独立 `.bat`，玩家只需选择自己语言的一个文件。
 
 执行不接触真实游戏设置的隔离回归检查：
 
